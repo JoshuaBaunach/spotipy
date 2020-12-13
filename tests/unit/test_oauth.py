@@ -5,8 +5,10 @@ import unittest
 
 import six.moves.urllib.parse as urllibparse
 
+from requests import Response
+
 from spotipy import SpotifyOAuth, SpotifyImplicitGrant, SpotifyPKCE
-from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOauthError
+from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOauthError, SpotifyServerResponseError
 from spotipy.oauth2 import SpotifyStateError
 
 try:
@@ -219,6 +221,16 @@ class TestSpotifyClientCredentials(unittest.TestCase):
         with self.assertRaises(SpotifyOauthError) as error:
             oauth.get_access_token()
         self.assertEqual(error.exception.error, 'invalid_client')
+
+    def test_spotify_client_credentials_get_access_token_server_error(self):
+        mock_response = Response()
+        mock_response.status_code = 500
+
+        oauth = SpotifyClientCredentials(client_id='ID', client_secret='SECRET')
+        oauth._session.post = mock.Mock()
+        oauth._session.post.return_value = mock_response
+        with self.assertRaises(SpotifyServerResponseError) as error:
+            oauth.get_access_token()
 
 
 class ImplicitGrantCacheTest(unittest.TestCase):

@@ -42,6 +42,14 @@ class SpotifyOauthError(Exception):
         super(SpotifyOauthError, self).__init__(message, *args, **kwargs)
 
 
+class SpotifyServerResponseError(Exception):
+    """ Thrown by a Spotify server error """
+
+    def __init__(self, message, *args, **kwargs):
+        self.__dict__.update(kwargs)
+        super(SpotifyServerResponseError, self).__init__(message, *args, **kwargs)
+
+
 class SpotifyStateError(SpotifyOauthError):
     """ The state sent and state recieved were different """
 
@@ -210,13 +218,17 @@ class SpotifyClientCredentials(SpotifyAuthBase):
             proxies=self.proxies,
             timeout=self.requests_timeout,
         )
-        if response.status_code != 200:
+        if response.status_code != 200 and response.status_code < 500:
             error_payload = response.json()
             raise SpotifyOauthError(
                 'error: {0}, error_description: {1}'.format(
                     error_payload['error'], error_payload['error_description']),
                 error=error_payload['error'],
                 error_description=error_payload['error_description'])
+        elif response.status_code != 200:
+            raise SpotifyServerResponseError(
+                '{0} on {1}'.format(
+                    response.status_code, self.OAUTH_TOKEN_URL))
         token_info = response.json()
         return token_info
 
